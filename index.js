@@ -70,6 +70,51 @@ app.post("/send", async (req, res) => {
 });
 
 /* =========================
+   GET USER UID API
+========================= */
+app.post("/get-user", async (req, res) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({ success: false, error: "Missing ID Token" });
+  }
+
+  try {
+    // Verify the token sent from the frontend
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    res.json({ success: true, uid });
+  } catch (err) {
+    res.status(401).json({ success: false, error: "Invalid or expired token" });
+  }
+});
+
+/* =========================
+   GET ALL USER UIDs API
+========================= */
+app.get("/get-uids", async (req, res) => {
+  try {
+    const snapshot = await db.collection("fcm_token").get();
+    
+    // Return an array of all user details with human-readable timestamps (e.g., 14/4/2026, 4:14:41 PM)
+    const users = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        uid: doc.id,
+        ...data,
+        createAt: data.createAt?.toDate ? data.createAt.toDate().toLocaleString('en-GB') : data.createAt,
+        updateAt: data.updateAt?.toDate ? data.updateAt.toDate().toLocaleString('en-GB') : data.updateAt,
+      };
+    });
+
+    res.json({ success: true, count: users.length, users });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+/* =========================
    TEST ROUTE
 ========================= */
 app.get("/", (req, res) => {
